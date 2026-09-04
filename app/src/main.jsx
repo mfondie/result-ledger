@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.jsx";
 import "./styles.css";
 
 function showFatalError(err) {
@@ -17,12 +16,12 @@ function showFatalError(err) {
 window.addEventListener("error", (e) => showFatalError(e.error || e.message));
 window.addEventListener("unhandledrejection", (e) => showFatalError(e.reason));
 
-try {
-  ReactDOM.createRoot(document.getElementById("root")).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-} catch (err) {
-  showFatalError(err);
-}
+import("./App.jsx")
+  .then(({ default: App }) => {
+    ReactDOM.createRoot(document.getElementById("root")).render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+  })
+  .catch((err) => showFatalError(err));
