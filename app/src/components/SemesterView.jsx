@@ -166,7 +166,7 @@ export default function SemesterView({ department, semester, students, results, 
                   <button className="entry-btn" onClick={() => reopenCourse(c.id).then(onChanged)}>Reopen</button>
                 )}
                 {admin && (
-                  <button className="chip-remove" onClick={() => deleteCourse(c.id).then(onChanged)} aria-label={`Remove ${c.code}`}>\×</button>
+                  <button className="chip-remove" onClick={() => deleteCourse(c.id).then(onChanged)} aria-label={`Remove ${c.code}`}>×</button>
                 )}
               </div>
             );
