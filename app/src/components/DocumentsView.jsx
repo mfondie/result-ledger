@@ -1,46 +1,5 @@
 import { useState } from "react";
 import { gradeForRaw, fmt, remarkFor, semesterDisplayName } from "../lib/grading";
-import { supabase } from "../lib/supabaseClient";
-
-// Standalone helper function for emailing results via Supabase Edge Function
-async function handleSendStudentEmail({ student, studentResult, department, semester, setSendingMap }) {
-  const email = student?.email;
-  const matricNo = student?.matric_number || student?.matric || "";
-
-  if (!email) {
-    alert(`No email address recorded for ${student?.name || "this student"} (${matricNo}).`);
-    return;
-  }
-
-  // Set loading state for this specific student
-  setSendingMap((prev) => ({ ...prev, [student.id]: true }));
-
-  try {
-    const { data, error } = await supabase.functions.invoke("send-student-results", {
-      body: {
-        departmentName: department?.name || "Department",
-        semesterName: semester ? semesterDisplayName(semester) : "Semester Results",
-        studentData: {
-          name: student.name,
-          email: email,
-          matricNo: matricNo,
-          gpa: studentResult?.gpa !== undefined && studentResult?.gpa !== null ? fmt(studentResult.gpa) : "N/A",
-          cgpa: studentResult?.cgpa !== undefined && studentResult?.cgpa !== null ? fmt(studentResult.cgpa) : "N/A",
-          courses: studentResult?.courses || [], // Array of [{ code, title, unit, score, grade }]
-        },
-      },
-    });
-
-    if (error) throw error;
-
-    alert(`Result slip successfully sent to ${email}`);
-  } catch (err) {
-    console.error("Email dispatch failed:", err);
-    alert(`Failed to send email: ${err.message || String(err)}`);
-  } finally {
-    setSendingMap((prev) => ({ ...prev, [student.id]: false }));
-  }
-}
 
 function csvSafe(v) { return v ?? ""; }
 
@@ -81,7 +40,6 @@ function SignatureBlock({ lines }) {
 
 function TranscriptDoc({ department, semesters, students, results }) {
   const [studentId, setStudentId] = useState(students[0]?.id || "");
-  const [sendingMap, setSendingMap] = useState({});
   const student = students.find((s) => s.id === studentId);
   if (!students.length) return <p className="help-text">Add students first.</p>;
 
@@ -92,7 +50,7 @@ function TranscriptDoc({ department, semesters, students, results }) {
           Student
           <select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
             {students.map((s) => (
-              <option key={s.id} value={s.id}>{s.name} ({s.matric || s.matric_number})</option>
+              <option key={s.id} value={s.id}>{s.name} ({s.matric})</option>
             ))}
           </select>
         </label>
@@ -104,7 +62,7 @@ function TranscriptDoc({ department, semesters, students, results }) {
           <DocHeader department={department} title="Official Transcript of Academic Record" />
           <div className="doc-student-block">
             <div><strong>Name:</strong> {student.name}</div>
-            <div><strong>Matric No.:</strong> {student.matric || student.matric_number}</div>
+            <div><strong>Matric No.:</strong> {student.matric}</div>
           </div>
 
           {semesters.map((sem) => {
@@ -153,7 +111,6 @@ function TranscriptDoc({ department, semesters, students, results }) {
 
 function SemesterSheetDoc({ department, semesters, students, results }) {
   const [semesterId, setSemesterId] = useState(semesters[0]?.id || "");
-  const [sendingMap, setSendingMap] = useState({});
   const semester = semesters.find((s) => s.id === semesterId);
   if (!semesters.length) return <p className="help-text">Create a semester first.</p>;
 
@@ -178,30 +135,15 @@ function SemesterSheetDoc({ department, semesters, students, results }) {
                 <th>Name</th><th>Matric No.</th>
                 {semester.courses.map((c) => <th key={c.id} style={{ textAlign: "center" }}>{c.code}</th>)}
                 <th>GPA</th><th>CGPA</th><th>Remarks</th>
-                <th className="no-print" style={{ textAlign: "center" }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {students.map((stu) => {
                 const r = results[semester.id]?.[stu.id] || { gpa: null, cgpa: null, rpt: [], co: [] };
-                
-                // Construct student's course results for email payload
-                const courseResults = semester.courses.map((c) => {
-                  const raw = semester.scoresByStudent?.[stu.id]?.[c.id];
-                  const g = raw !== undefined && raw !== "" ? gradeForRaw(raw, department.bands) : null;
-                  return {
-                    code: c.code,
-                    title: c.title,
-                    unit: c.credit,
-                    score: raw !== undefined && raw !== "" ? raw : "N/A",
-                    grade: g ? g.letter : "N/A",
-                  };
-                });
-
                 return (
                   <tr key={stu.id}>
                     <td>{stu.name}</td>
-                    <td>{stu.matric || stu.matric_number}</td>
+                    <td>{stu.matric}</td>
                     {semester.courses.map((c) => {
                       const raw = semester.scoresByStudent?.[stu.id]?.[c.id];
                       const g = raw !== undefined && raw !== "" ? gradeForRaw(raw, department.bands) : null;
@@ -210,24 +152,6 @@ function SemesterSheetDoc({ department, semesters, students, results }) {
                     <td style={{ textAlign: "center" }}>{fmt(r.gpa)}</td>
                     <td style={{ textAlign: "center" }}>{fmt(r.cgpa)}</td>
                     <td>{remarkFor(r)}</td>
-                    <td className="no-print" style={{ textAlign: "center" }}>
-                      <button
-                        className="secondary"
-                        style={{ fontSize: "0.75rem", padding: "2px 8px" }}
-                        disabled={sendingMap[stu.id]}
-                        onClick={() =>
-                          handleSendStudentEmail({
-                            student: stu,
-                            studentResult: { ...r, courses: courseResults },
-                            department,
-                            semester,
-                            setSendingMap,
-                          })
-                        }
-                      >
-                        {sendingMap[stu.id] ? "Sending..." : "📧 Email"}
-                      </button>
-                    </td>
                   </tr>
                 );
               })}
@@ -293,7 +217,7 @@ function BroadsheetDoc({ department, semesters, students, results }) {
                   return (
                     <tr key={stu.id}>
                       <td>{stu.name}</td>
-                      <td>{stu.matric || stu.matric_number}</td>
+                      <td>{stu.matric}</td>
                       {chosen.flatMap((sem) =>
                         sem.courses.length
                           ? sem.courses.map((c) => {
@@ -322,24 +246,10 @@ function BroadsheetDoc({ department, semesters, students, results }) {
 function StatementDoc({ department, semesters, students, results }) {
   const [studentId, setStudentId] = useState(students[0]?.id || "");
   const [semesterId, setSemesterId] = useState(semesters[0]?.id || "");
-  const [sendingMap, setSendingMap] = useState({});
   const student = students.find((s) => s.id === studentId);
   const semester = semesters.find((s) => s.id === semesterId);
   const r = semester && student ? results[semester.id]?.[student.id] : null;
   if (!students.length || !semesters.length) return <p className="help-text">Add at least one student and one semester first.</p>;
-
-  // Prepare course results for the single student statement
-  const courseResults = semester && student ? semester.courses.map((c) => {
-    const raw = semester.scoresByStudent?.[student.id]?.[c.id];
-    const g = raw !== undefined && raw !== "" ? gradeForRaw(raw, department.bands) : null;
-    return {
-      code: c.code,
-      title: c.title,
-      unit: c.credit,
-      score: raw !== undefined && raw !== "" ? raw : "N/A",
-      grade: g ? g.letter : "N/A",
-    };
-  }) : [];
 
   return (
     <div>
@@ -347,7 +257,7 @@ function StatementDoc({ department, semesters, students, results }) {
         <label className="field">
           Student
           <select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-            {students.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.matric || s.matric_number})</option>)}
+            {students.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.matric})</option>)}
           </select>
         </label>
         <label className="field">
@@ -356,25 +266,6 @@ function StatementDoc({ department, semesters, students, results }) {
             {semesters.map((s) => <option key={s.id} value={s.id}>{semesterDisplayName(s)}</option>)}
           </select>
         </label>
-        
-        {student && (
-          <button
-            className="secondary"
-            disabled={sendingMap[student.id]}
-            onClick={() =>
-              handleSendStudentEmail({
-                student,
-                studentResult: { ...r, courses: courseResults },
-                department,
-                semester,
-                setSendingMap,
-              })
-            }
-          >
-            {sendingMap[student.id] ? "Sending Email..." : "📧 Email Result to Student"}
-          </button>
-        )}
-
         <PrintButton />
       </div>
 
@@ -383,7 +274,7 @@ function StatementDoc({ department, semesters, students, results }) {
           <DocHeader department={department} title={`Statement of Result — ${semesterDisplayName(semester)}`} />
           <div className="doc-student-block">
             <div><strong>Name:</strong> {student.name}</div>
-            <div><strong>Matric No.:</strong> {student.matric || student.matric_number}</div>
+            <div><strong>Matric No.:</strong> {student.matric}</div>
           </div>
           <table className="doc-table">
             <thead><tr><th>Code</th><th>Title</th><th>CU</th><th>Score</th><th>Grade</th></tr></thead>
