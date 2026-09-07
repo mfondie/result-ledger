@@ -29,11 +29,23 @@ export function parseSpreadsheetFile(file) {
   });
 }
 
+// Strips everything except letters and numbers, so "Matric No.", "MATRIC_NO",
+// "Matric-No", and "matric no" are all treated as the same header.
+function normalize(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 export function findColumn(row, candidates) {
   const keys = Object.keys(row);
-  for (const cand of candidates) {
-    const hit = keys.find((k) => k.trim().toLowerCase() === cand.toLowerCase());
-    if (hit) return hit;
+  const normCandidates = candidates.map(normalize);
+  for (const key of keys) {
+    if (normCandidates.includes(normalize(key))) return key;
+  }
+  // fall back to a loose "contains" match, e.g. a header of "Matriculation
+  // Number" against a candidate of "matric"
+  for (const key of keys) {
+    const nk = normalize(key);
+    if (normCandidates.some((c) => c.length >= 4 && nk.includes(c))) return key;
   }
   return null;
 }
