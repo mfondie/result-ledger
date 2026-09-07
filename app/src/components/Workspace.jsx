@@ -3,6 +3,7 @@ import {
   loadDepartmentBundle,
   fetchAllDepartments,
   createDepartment,
+  deleteDepartment,
   addSemester,
   setScore as apiSetScore,
 } from "../lib/api";
@@ -54,6 +55,9 @@ export default function Workspace({ profile, onSignOut }) {
           setDepartments((prev) => [...(prev || []), dept]);
           setActiveDeptId(dept.id);
         }}
+        onDeleted={(deptId) => {
+          setDepartments((prev) => (prev || []).filter((d) => d.id !== deptId));
+        }}
       />
     );
   }
@@ -69,7 +73,7 @@ export default function Workspace({ profile, onSignOut }) {
   );
 }
 
-function DeptPicker({ departments, profile, onSelect, onSignOut, onCreated }) {
+function DeptPicker({ departments, profile, onSelect, onSignOut, onCreated, onDeleted }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -82,6 +86,17 @@ function DeptPicker({ departments, profile, onSelect, onSignOut, onCreated }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const remove = async (dept) => {
+    if (
+      !window.confirm(
+        `Permanently delete "${dept.name}" and everything in it — students, semesters, courses, scores, and its audit trail? This cannot be undone.`
+      )
+    )
+      return;
+    await deleteDepartment(dept.id);
+    onDeleted(dept.id);
   };
 
   return (
@@ -97,9 +112,12 @@ function DeptPicker({ departments, profile, onSelect, onSignOut, onCreated }) {
         ) : (
           <div className="form-grid">
             {departments.map((d) => (
-              <button key={d.id} className="secondary" style={{ textAlign: "left" }} onClick={() => onSelect(d.id)}>
-                {d.name}
-              </button>
+              <div key={d.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button className="secondary" style={{ textAlign: "left", flex: 1 }} onClick={() => onSelect(d.id)}>
+                  {d.name}
+                </button>
+                <button className="ghost" onClick={() => remove(d)}>Delete</button>
+              </div>
             ))}
           </div>
         )}
