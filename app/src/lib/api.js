@@ -98,6 +98,11 @@ export async function updateDepartment(id, fields) {
   if (error) throw error;
 }
 
+export async function deleteDepartment(id) {
+  const { error } = await supabase.from("departments").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // ---------- students ----------
 
 export async function addStudent(departmentId, fields) {
@@ -255,4 +260,25 @@ export async function createUserAccount({ email, password, name, role, departmen
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
   return data;
+}
+
+async function callManageUser(payload) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const { data, error } = await supabase.functions.invoke("admin-manage-user", {
+    body: payload,
+    headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function updateUserRole(userId, role) {
+  return callManageUser({ action: "update_role", userId, role });
+}
+
+export async function deleteUserAccount(userId) {
+  return callManageUser({ action: "delete", userId });
 }
