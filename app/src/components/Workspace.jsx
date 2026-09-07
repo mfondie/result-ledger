@@ -24,7 +24,7 @@ function groupSemesters(semesters) {
   const order = [];
   const map = {};
   semesters.forEach((sem) => {
-    const key = [sem.session, sem.level].filter(Boolean).join(" \u00b7 ") || "Unsorted";
+    const key = [sem.session, sem.level].filter(Boolean).join(" · ") || "Unsorted";
     if (!map[key]) {
       map[key] = [];
       order.push(key);
@@ -108,7 +108,7 @@ function DeptPicker({ departments, profile, onSelect, onSignOut, onCreated, onDe
         </div>
         <h1 className="page-title">{departments?.length ? "Choose a department" : "Create your first department"}</h1>
         {departments === null ? (
-          <p className="help-text">Loading\u2026</p>
+          <p className="help-text">Loading…</p>
         ) : (
           <div className="form-grid">
             {departments.map((d) => (
@@ -163,9 +163,6 @@ function DepartmentShell({ profile, departmentId, onSignOut, onSwitchDepartment 
 
   useEffect(() => { reload(); }, [reload]);
 
-  // Optimistic local update for score entry — see setScoreOptimistic below.
-  // Everything else re-fetches the bundle after the write so server-set
-  // fields (submitted_by/at, approved_by/at, audit log) stay authoritative.
   const setScoreOptimistic = useCallback(
     async (semesterId, courseId, studentId, value) => {
       setSemesters((prev) =>
@@ -200,7 +197,7 @@ function DepartmentShell({ profile, departmentId, onSignOut, onSwitchDepartment 
   if (loading && !department) {
     return (
       <div className="centered">
-        <div className="help-text">Loading department\u2026</div>
+        <div className="help-text">Loading department…</div>
       </div>
     );
   }
@@ -225,21 +222,24 @@ function DepartmentShell({ profile, departmentId, onSignOut, onSwitchDepartment 
   return (
     <div className="app">
       <aside className="rail">
+        {/* HEADER: Large bold title with section mark removed */}
         <div className="rail-head">
-          <div className="rail-mark">\u00a7</div>
           <div>
-            <div className="rail-title">Result Ledger</div>
-            <div className="rail-sub">{department?.name || "Department"}</div>
+            <h1 style={{ fontSize: "1.75rem", fontWeight: "800", color: "#ffffff", margin: 0, lineHeight: "1.2" }}>
+             RESULT LEDGER
+            </h1>
+            <div className="rail-sub" style={{ marginTop: "4px" }}>{department?.name || "Department"}</div>
           </div>
         </div>
 
+        {/* BUTTON: \u21c4 removed */}
         {onSwitchDepartment && (
-          <button className="add-btn" onClick={onSwitchDepartment}>\u21c4 Switch department</button>
+          <button className="add-btn" onClick={onSwitchDepartment}>Switch department</button>
         )}
 
         <div className="session-bar">
           <div>{profile.name}</div>
-          <div className="session-role">{ROLE_LABELS[profile.role]}{profile.is_superadmin ? " \u00b7 superadmin" : ""}</div>
+          <div className="session-role">{ROLE_LABELS[profile.role]}{profile.is_superadmin ? " · superadmin" : ""}</div>
           <button className="logout-link" onClick={onSignOut}>Log out</button>
         </div>
 
@@ -254,7 +254,7 @@ function DepartmentShell({ profile, departmentId, onSignOut, onSwitchDepartment 
                   className={`tab-btn${view.tab === "semester" && view.semesterId === sem.id ? " active" : ""}`}
                   onClick={() => setView({ tab: "semester", semesterId: sem.id })}
                 >
-                  <span className="tab-label">{semesterDisplayName(sem)}{sem.is_final ? " \u2605" : ""}</span>
+                  <span className="tab-label">{semesterDisplayName(sem)}{sem.is_final ? " ★" : ""}</span>
                 </button>
               ))}
             </div>
@@ -329,9 +329,9 @@ function DepartmentShell({ profile, departmentId, onSignOut, onSwitchDepartment 
             onChanged={reload}
           />
         )}
+        {/* EMPTY STATE: \u00a7 removed */}
         {view.tab === "semester" && !activeSemester && admin && (
           <div className="empty-state">
-            <div className="empty-mark">\u00a7</div>
             <h2 className="page-title">No semester yet</h2>
             <p className="help-text">Create your first semester from the sidebar to start entering courses and scores.</p>
           </div>
