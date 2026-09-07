@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchDepartmentProfiles, createUserAccount } from "../lib/api";
+import { fetchDepartmentProfiles, createUserAccount, updateUserRole, deleteUserAccount } from "../lib/api";
 import { ROLE_LABELS } from "../lib/permissions";
 
 export default function UserManagementView({ departmentId }) {
@@ -10,6 +10,27 @@ export default function UserManagementView({ departmentId }) {
 
   const reload = () => fetchDepartmentProfiles(departmentId).then(setProfiles);
   useEffect(() => { reload(); }, [departmentId]);
+
+  const changeRole = async (profile, newRole) => {
+    if (newRole === profile.role) return;
+    if (!window.confirm(`Change ${profile.name}'s role from ${ROLE_LABELS[profile.role]} to ${ROLE_LABELS[newRole]}?`)) return;
+    try {
+      await updateUserRole(profile.id, newRole);
+      await reload();
+    } catch (e) {
+      setError(e.message || String(e));
+    }
+  };
+
+  const removeAccount = async (profile) => {
+    if (!window.confirm(`Permanently delete ${profile.name}'s account (${profile.email})? This cannot be undone.`)) return;
+    try {
+      await deleteUserAccount(profile.id);
+      await reload();
+    } catch (e) {
+      setError(e.message || String(e));
+    }
+  };
 
   const submit = async () => {
     setError("");
@@ -71,16 +92,31 @@ export default function UserManagementView({ departmentId }) {
         <p className="help-text">Loading\u2026</p>
       ) : (
         <table className="data-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
           <tbody>
             {profiles.map((p) => (
               <tr key={p.id}>
                 <td>{p.name}{p.is_superadmin ? " (superadmin)" : ""}</td>
                 <td>{p.email}</td>
-                <td>{ROLE_LABELS[p.role] || p.role}</td>
+                <td>
+                  {p.is_superadmin ? (
+                    ROLE_LABELS[p.role] || p.role
+                  ) : (
+                    <select value={p.role} onChange={(e) => changeRole(p, e.target.value)}>
+                      <option value="hod">Head of Department</option>
+                      <option value="exams_officer">Exams Officer</option>
+                      <option value="lecturer">Course Lecturer</option>
+                    </select>
+                  )}
+                </td>
+                <td>
+                  {!p.is_superadmin && (
+                    <button className="ghost" onClick={() => removeAccount(p)}>Delete</button>
+                  )}
+                </td>
               </tr>
             ))}
-            {profiles.length === 0 && <tr><td colSpan={3}>No accounts yet.</td></tr>}
+            {profiles.length === 0 && <tr><td colSpan={4}>No accounts yet.</td></tr>}
           </tbody>
         </table>
       )}
