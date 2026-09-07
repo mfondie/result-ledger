@@ -282,3 +282,68 @@ export async function updateUserRole(userId, role) {
 export async function deleteUserAccount(userId) {
   return callManageUser({ action: "delete", userId });
 }
+// ==========================================
+// IN-APP NOTIFICATIONS API
+// ==========================================
+
+/**
+ * Fetch all notifications for the current department
+ */
+export async function fetchNotifications(departmentId) {
+  if (!departmentId) return [];
+
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("department_id", departmentId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching notifications:", error);
+    throw error;
+  }
+  return data || [];
+}
+
+/**
+ * Create a new notification (e.g. when results are submitted or approved)
+ */
+export async function createNotification(departmentId, { title, message, type = "info", userId = null }) {
+  const { data, error } = await supabase
+    .from("notifications")
+    .insert([
+      {
+        department_id: departmentId,
+        user_id: userId, // NULL broadcasts to entire department
+        title,
+        message,
+        type, // 'info', 'success', 'warning', 'action'
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating notification:", error);
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * Mark a single notification as read
+ */
+export async function markNotificationAsRead(notificationId) {
+  const { data, error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", notificationId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error marking notification as read:", error);
+    throw error;
+  }
+  return data;
+}
