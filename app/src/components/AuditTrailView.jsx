@@ -31,7 +31,7 @@ export default function AuditTrailView({ departmentId }) {
         </select>
       </label>
       {log === null ? (
-        <p className="help-text">Loading\u2026</p>
+        <p className="help-text">Loading…</p>
       ) : filtered.length === 0 ? (
         <p className="help-text">No activity recorded yet.</p>
       ) : (
