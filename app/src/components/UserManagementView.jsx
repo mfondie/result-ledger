@@ -84,12 +84,12 @@ export default function UserManagementView({ departmentId }) {
             <option value="lecturer">Course Lecturer</option>
           </select>
         </label>
-        <button className="primary" onClick={submit} disabled={busy}>{busy ? "Creating\u2026" : "+ Create account"}</button>
+        <button className="primary" onClick={submit} disabled={busy}>{busy ? "Creating…" : "+ Create account"}</button>
       </div>
 
       <h3 className="section-title">Existing accounts in this department</h3>
       {profiles === null ? (
-        <p className="help-text">Loading\u2026</p>
+        <p className="help-text">Loading…</p>
       ) : (
         <table className="data-table">
           <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
