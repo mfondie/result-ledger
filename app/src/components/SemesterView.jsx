@@ -148,17 +148,17 @@ export default function SemesterView({ department, semester, students, results, 
             const editable = canEditCourse(profile, c);
             const lecturerName = lecturers.find((l) => l.id === c.lecturer_id)?.name;
             return (
-              <div className="course-chip" key={c.id} title={[lecturerName && `Lecturer: ${lecturerName}`, c.due_date && `Due: ${c.due_date}`].filter(Boolean).join(" \u00b7 ")}>
+              <div className="course-chip" key={c.id} title={[lecturerName && `Lecturer: ${lecturerName}`, c.due_date && `Due: ${c.due_date}`].filter(Boolean).join(" · ")}>
                 <span className="chip-code">{c.code}</span>
                 {c.type === "elective" && <span className="elective-tag">ELECTIVE</span>}
                 <span className="chip-credit">{c.credit}cu</span>
                 {admin && (
                   <button className="entry-btn" title="Toggle score vs. letter-grade entry" onClick={() => toggleEntryMode(c)}>
-                    {c.grade_entry_mode === "letter" ? "A\u2013F" : "0\u2013100"}
+                    {c.grade_entry_mode === "letter" ? "A–F" : "0–100"}
                   </button>
                 )}
                 {c.locked ? (
-                  <span className="locked-tag" title={c.submitted_at ? new Date(c.submitted_at).toLocaleString() : ""}>\ud83d\udd12 locked</span>
+                  <span className="locked-tag" title={c.submitted_at ? new Date(c.submitted_at).toLocaleString() : ""}>🔒 locked</span>
                 ) : (
                   editable && <button className="entry-btn" onClick={() => submitCourse(c.id).then(onChanged)}>Submit</button>
                 )}
@@ -166,7 +166,7 @@ export default function SemesterView({ department, semester, students, results, 
                   <button className="entry-btn" onClick={() => reopenCourse(c.id).then(onChanged)}>Reopen</button>
                 )}
                 {admin && (
-                  <button className="chip-remove" onClick={() => deleteCourse(c.id).then(onChanged)} aria-label={`Remove ${c.code}`}>&times;</button>
+                  <button className="chip-remove" onClick={() => deleteCourse(c.id).then(onChanged)} aria-label={`Remove ${c.code}`}>×</button>
                 )}
               </div>
             );
@@ -174,7 +174,7 @@ export default function SemesterView({ department, semester, students, results, 
         </div>
         {overLoad && (
           <div className="warning-banner">
-            \u26a0 This semester's course list totals {totalCredit} credit units, above the {department.policy.maxCreditLoad}-unit maximum load.
+            ⚠ This semester's course list totals {totalCredit} credit units, above the {department.policy.maxCreditLoad}-unit maximum load.
           </div>
         )}
         {admin && (
@@ -219,7 +219,7 @@ export default function SemesterView({ department, semester, students, results, 
               {semester.courses.map((c) => (
                 <th key={c.id} style={{ textAlign: "center" }}>
                   {c.code}
-                  <div className="th-sub">{c.credit}cu{c.type === "elective" ? " \u00b7 elec" : ""}</div>
+                  <div className="th-sub">{c.credit}cu{c.type === "elective" ? " · elec" : ""}</div>
                 </th>
               ))}
               <th style={{ textAlign: "center" }}>CU</th>
@@ -248,7 +248,7 @@ export default function SemesterView({ department, semester, students, results, 
                         {editable ? (
                           c.grade_entry_mode === "letter" ? (
                             <select value={raw ?? ""} onChange={(e) => onSetScore(semester.id, c.id, stu.id, e.target.value)}>
-                              <option value="">\u2014</option>
+                              <option value="">—</option>
                               {letterOptions(bands).map((l) => <option key={l} value={l}>{l}</option>)}
                             </select>
                           ) : (
@@ -259,7 +259,7 @@ export default function SemesterView({ department, semester, students, results, 
                           )
                         ) : (
                           <span className={`grade-tag${g?.letter === "F" ? " fail" : ""}`}>
-                            {g ? (c.grade_entry_mode === "letter" ? g.letter : `${raw} ${g.letter}`) : "\u2014"}
+                            {g ? (c.grade_entry_mode === "letter" ? g.letter : `${raw} ${g.letter}`) : "—"}
                           </span>
                         )}
                       </td>
@@ -273,7 +273,7 @@ export default function SemesterView({ department, semester, students, results, 
                       <span className={r.status === "WITHDRAWAL" ? "status-withdrawal" : "status-probation"}>{r.status}</span>
                     )}
                   </td>
-                  {semester.is_final && <td style={{ textAlign: "center", fontSize: 12.5 }}>{r.classification || "\u2014"}</td>}
+                  {semester.is_final && <td style={{ textAlign: "center", fontSize: 12.5 }}>{r.classification || "—"}</td>}
                   <td className={r.rpt?.length ? "remark-fail" : "remark-pass"}>{remarkFor(r)}</td>
                 </tr>
               );
