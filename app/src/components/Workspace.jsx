@@ -19,6 +19,7 @@ import DashboardView from "./DashboardView.jsx";
 import DocumentsView from "./DocumentsView.jsx";
 import NotificationsView from "./NotificationsView.jsx";
 import DataChecksView from "./DataChecksView.jsx";
+import NotificationBell from "./NotificationBell.jsx";
 
 function groupSemesters(semesters) {
   const order = [];
@@ -163,6 +164,9 @@ function DepartmentShell({ profile, departmentId, onSignOut, onSwitchDepartment 
 
   useEffect(() => { reload(); }, [reload]);
 
+  // Optimistic local update for score entry — see setScoreOptimistic below.
+  // Everything else re-fetches the bundle after the write so server-set
+  // fields (submitted_by/at, approved_by/at, audit log) stay authoritative.
   const setScoreOptimistic = useCallback(
     async (semesterId, courseId, studentId, value) => {
       setSemesters((prev) =>
@@ -222,19 +226,17 @@ function DepartmentShell({ profile, departmentId, onSignOut, onSwitchDepartment 
   return (
     <div className="app">
       <aside className="rail">
-        {/* HEADER: Large bold title with section mark removed */}
         <div className="rail-head">
+          <div className="rail-mark">§</div>
           <div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: "800", color: "#ffffff", margin: 0, lineHeight: "1.2" }}>
-             RESULT LEDGER
-            </h1>
-            <div className="rail-sub" style={{ marginTop: "4px" }}>{department?.name || "Department"}</div>
+            <div className="rail-title">Result Ledger</div>
+            <div className="rail-sub">{department?.name || "Department"}</div>
           </div>
+          <NotificationBell departmentId={departmentId} userId={profile.id} />
         </div>
 
-        {/* BUTTON: \u21c4 removed */}
         {onSwitchDepartment && (
-          <button className="add-btn" onClick={onSwitchDepartment}>Switch department</button>
+          <button className="add-btn" onClick={onSwitchDepartment}>⇄ Switch department</button>
         )}
 
         <div className="session-bar">
@@ -329,9 +331,9 @@ function DepartmentShell({ profile, departmentId, onSignOut, onSwitchDepartment 
             onChanged={reload}
           />
         )}
-        {/* EMPTY STATE: \u00a7 removed */}
         {view.tab === "semester" && !activeSemester && admin && (
           <div className="empty-state">
+            <div className="empty-mark">§</div>
             <h2 className="page-title">No semester yet</h2>
             <p className="help-text">Create your first semester from the sidebar to start entering courses and scores.</p>
           </div>
