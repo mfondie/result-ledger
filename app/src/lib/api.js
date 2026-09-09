@@ -282,68 +282,69 @@ export async function updateUserRole(userId, role) {
 export async function deleteUserAccount(userId) {
   return callManageUser({ action: "delete", userId });
 }
-// ==========================================
-// IN-APP NOTIFICATIONS API
-// ==========================================
 
-/**
- * Fetch all notifications for the current department
- */
-export async function fetchNotifications(departmentId) {
-  if (!departmentId) return [];
+// ---------- notifications ----------
 
+export async function fetchNotifications(departmentId, limit = 50) {
   const { data, error } = await supabase
     .from("notifications")
     .select("*")
     .eq("department_id", departmentId)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Error fetching notifications:", error);
-    throw error;
-  }
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
   return data || [];
 }
 
-/**
- * Create a new notification (e.g. when results are submitted or approved)
- */
-export async function createNotification(departmentId, { title, message, type = "info", userId = null }) {
-  const { data, error } = await supabase
-    .from("notifications")
-    .insert([
-      {
-        department_id: departmentId,
-        user_id: userId, // NULL broadcasts to entire department
-        title,
-        message,
-        type, // 'info', 'success', 'warning', 'action'
-      },
-    ])
-    .select()
-    .single();
+export async function markNotificationRead(id) {
+  const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+  if (error) throw error;
+}
 
-  if (error) {
-    console.error("Error creating notification:", error);
-    throw error;
-  }
+// ---------- result emails ----------
+
+export async function fetchEmailLogs(semesterId) {
+  const { data, error } = await supabase.from("result_email_logs").select("*").eq("semester_id", semesterId);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function sendResultEmail({ studentId, semesterId, gpa, cgpa, courses }) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const { data, error } = await supabase.functions.invoke("send-result-email", {
+    body: { studentId, semesterId, gpa, cgpa, courses },
+    headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
   return data;
 }
 
-/**
- * Mark a single notification as read
- */
-export async function markNotificationAsRead(notificationId) {
-  const { data, error } = await supabase
-    .from("notifications")
-    .update({ is_read: true })
-    .eq("id", notificationId)
-    .select()
-    .single();
+// ---------- Gmail connection ----------
 
-  if (error) {
-    console.error("Error marking notification as read:", error);
-    throw error;
-  }
+async function callGmailFn(fnName, payload) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const { data, error } = await supabase.functions.invoke(fnName, {
+    body: payload,
+    headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
   return data;
+}
+
+export async function getGmailAuthUrl(departmentId) {
+  return callGmailFn("gmail-oauth-url", { departmentId });
+}
+
+export async function completeGmailOAuth(code, departmentId) {
+  return callGmailFn("gmail-oauth-callback", { code, departmentId });
+}
+
+export async function getGmailStatus(departmentId) {
+  return callGmailFn("gmail-status", { departmentId });
 }
